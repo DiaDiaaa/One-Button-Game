@@ -1,8 +1,11 @@
 // The title of the game to be displayed on the title screen
-title  =  "BUBBLE BUBBLE";
+title  =  "Green Light!!!";
 
 // The description, which is also displayed on the title screen
-description  =  `Drop the beat!
+description  =  `Speed!!!
+Click on green light,
+Sneak through yellow,
+Hold on red light.
 `;
 
 // The array of custom sprites
@@ -42,7 +45,6 @@ const G = {
 options = {
 	viewSize: {x: G.WIDTH, y: G.HEIGHT},
 	theme: "dark",
-	seed: 2,
 	isPlayingBgm: true,
 	isReplayEnabled: true
 };
@@ -78,8 +80,6 @@ let player;
 * pos: Vector,
 * rad: number,
 * type: number,
-* x: number,
-* y: number,
 * }} enemy
 */
 /**
@@ -88,6 +88,26 @@ let player;
 let enemy=[];
 
 let click_count = 0;
+let current_type;
+
+let gameTime = 3000;
+function drawTime(time, x, y) {
+    let t = Math.floor((time * 100) / 50);
+    if (t >= 10 * 60 * 100) {
+        t = 10 * 60 * 100 - 1;
+    }
+    const ts =
+        getPaddedNumber(Math.floor(t / 6000), 1) +
+        "'" +
+        getPaddedNumber(Math.floor((t % 6000) / 100), 2) +
+        '"' +
+        getPaddedNumber(Math.floor(t % 100), 2);
+	color("red")
+    text(ts, x, y);
+}
+function getPaddedNumber(v, digit) {
+    return ("0000" + v).slice(-digit);
+}
 // The game loop function// The game loop function
 function update() {
     // The init function running at startup
@@ -116,6 +136,11 @@ function update() {
 			timer: 180
 		};
 	}
+	if(gameTime <= 0){
+		end();
+	}
+	gameTime--;
+	drawTime(gameTime,3,10);
 	// Update for Star
 	stars.forEach((s) => {
 		// Move the star downwards
@@ -126,8 +151,6 @@ function update() {
 		if(s.pos.y > G.HEIGHT) s.pos.y = 0;
 		// Choose a color to draw
 		color("light_yellow");
-		// Draw the star as a square of size 1
-		// box(s.pos, 1);
 		if(input.isPressed){
 			color("red")
 			if(s.pos.y > G.HEIGHT*0.5){
@@ -139,68 +162,47 @@ function update() {
 			char("b",s.pos);
 		}
 	});
-	if(player.timer > 0){
-		player.timer -= ticks/10000;
-	}else{
-		end();
-	}
-	if(player.rad <= 50){
-		player.rad += 0.25;
-		play("hit");
-	}
-	if(input.isPressed){
-		color("yellow");
-		particle(input.pos,10,1,rnd(0,PI),PI);
-		particle(input.pos,player.rad*10,player.rad/15);
-	}
-		color("cyan");
-		particle(input.pos,2,1,-PI/2,PI/4);
-	const rnd_x= rnd(G.RADIUS_MAX, G.WIDTH-(G.RADIUS_MAX*2))
-	const rnd_y = rnd(G.RADIUS_MAX*2, G.HEIGHT-(G.RADIUS_MAX*2))
-	const rnd_pos = vec(rnd_x,rnd_y)
+	if(player.rad < 50) player.rad += 0.25;
+	color("cyan")
+	arc(player.pos, player.rad);
 	const rnd_rad = rnd(G.RADIUS_MIN,G.RADIUS_MAX);
-	const rnd_type = rndi(0,4);
-	arc(input.pos, player.rad);
-	if(enemy.length < 1){
+	const rnd_type = rndi(0, 3);
+		if(enemy.length < 1){
 			for(let i = 0; i < 1; i++){
 				enemy.push({
-					pos: rnd_pos,
+					pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
 					rad: rnd_rad,
 					type: rnd_type,
-					x: rnd_x,
-					y: rnd_y,
 				});
 			}
 	}
 	remove(enemy,(e)=>{
-		if(e.type == 1){
-			color("red");
-			arc(e.pos, e.rad);
-		}else if(e.type == 2){
-			color("purple");
-			arc(e.pos, e.rad);
-		}else if(e.type == 3){
+		if(e.type == 2){
 			color("green");
-			arc(e.pos, e.rad);
-		}else{
+		}else if(e.type == 1 && player.rad < e.rad*0.75){
 			color("yellow");
-			arc(e.pos, e.rad);
+		}else{
+			color("red");
 		}
-		let earn_point = false;
-
-		// rect(e.x-0.5*e.rad,e.y-0.5*e.rad,e.rad,e.rad)
+		arc(e.pos,e.rad);
 		if(input.isJustPressed){
-			if(e.rad < player.rad){
-				if(input.pos.isInRect(e.x-0.5*e.rad,e.y-0.5*e.rad,e.rad,e.rad)){
-					play("coin");
-					addScore(e.rad);
-					earn_point = true;
-				}
+			if(e.type == 2 && player.rad < e.rad){
+				play("coin");
+				addScore(20);
 			}
-		}else if(e.rad+5 < player.rad){
-			player.rad = 5;
+			if(e.type == 1 && player.rad < e.rad*0.75){
+				play("hit");
+				addScore(5);
+			}else if(e.type ==1){
+				play("explosion");
+				addScore(-10);
+			}
+			if(e.type == 0){
+				play("explosion");
+				addScore(-20);
+			}
 		}
-		return earn_point;
+		return(e.rad < player.rad)
 	});
 	if(enemy.length == 0){
 		player.rad = 0;
