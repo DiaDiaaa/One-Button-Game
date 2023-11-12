@@ -29,7 +29,7 @@ characters = [
 
 // Data Container and change the size
 const G = {
-	WIDTH: 100,
+	WIDTH: 200,
 	HEIGHT: 150,
 	STAR_SPEED_MIN: 0.5,
 	STAR_SPEED_MAX: 1.0,
@@ -42,6 +42,7 @@ const G = {
 options = {
 	viewSize: {x: G.WIDTH, y: G.HEIGHT},
 	theme: "dark",
+	seed: 2,
 	isPlayingBgm: true,
 	isReplayEnabled: true
 };
@@ -76,6 +77,9 @@ let player;
 * @typedef {{
 * pos: Vector,
 * rad: number,
+* type: number,
+* x: number,
+* y: number,
 * }} enemy
 */
 /**
@@ -140,50 +144,63 @@ function update() {
 	}else{
 		end();
 	}
-	if(input.isJustPressed){
-		if(click_count >=50 &&enemy[0].rad-player.rad < 5){
-			click_count = 0;
-		}
-		click_count ++;
-		if (click_count < 5){
-			play("hit");
-		}else if(click_count < 10){
-			play("jump");
-		}else if(click_count < 15){
-			play("powerUp");
-		}else if(click_count < 20){
-			play("select");
-		}else{
-			play("explosion");
-		}
-		if(player.rad < 50) player.rad += 2;
+	if(player.rad <= 50){
+		player.rad += 0.25;
+		play("hit");
+	}
+	if(input.isPressed){
 		color("yellow");
 		particle(input.pos,10,1,rnd(0,PI),PI);
-		particle(player.pos,player.rad*10,player.rad/10);
-	}else{
+		particle(input.pos,player.rad*10,player.rad/15);
+	}
 		color("cyan");
 		particle(input.pos,2,1,-PI/2,PI/4);
-	}
-	arc(player.pos, player.rad);
-	text(player.timer.toString(), 3, 10);
-	// arc(enemy.pos, enemy.rad);
+	const rnd_x= rnd(G.RADIUS_MAX, G.WIDTH-(G.RADIUS_MAX*2))
+	const rnd_y = rnd(G.RADIUS_MAX*2, G.HEIGHT-(G.RADIUS_MAX*2))
+	const rnd_pos = vec(rnd_x,rnd_y)
 	const rnd_rad = rnd(G.RADIUS_MIN,G.RADIUS_MAX);
-		if(enemy.length < 1){
+	const rnd_type = rndi(0,4);
+	arc(input.pos, player.rad);
+	if(enemy.length < 1){
 			for(let i = 0; i < 1; i++){
 				enemy.push({
-					pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
-					rad: rnd_rad
+					pos: rnd_pos,
+					rad: rnd_rad,
+					type: rnd_type,
+					x: rnd_x,
+					y: rnd_y,
 				});
 			}
 	}
 	remove(enemy,(e)=>{
-		color("red");
-		arc(e.pos, e.rad);
-		if(e.rad < player.rad){
-			play("coin");
-			addScore(e.rad);
+		if(e.type == 1){
+			color("red");
+			arc(e.pos, e.rad);
+		}else if(e.type == 2){
+			color("purple");
+			arc(e.pos, e.rad);
+		}else if(e.type == 3){
+			color("green");
+			arc(e.pos, e.rad);
+		}else{
+			color("yellow");
+			arc(e.pos, e.rad);
 		}
-		return(e.rad < player.rad)
+		let earn_point = false;
+
+		// rect(e.x-0.5*e.rad,e.y-0.5*e.rad,e.rad,e.rad)
+		if(input.isJustPressed){
+			if(e.rad < player.rad){
+				if(input.pos.isInRect(e.x-0.5*e.rad,e.y-0.5*e.rad,e.rad,e.rad)){
+					play("coin");
+					addScore(e.rad);
+					earn_point = true;
+				}
+			}
+		}else if(e.rad+5 < player.rad){
+			player.rad = 5;
+		}
+		return earn_point;
 	});
 	if(enemy.length == 0){
 		player.rad = 0;
